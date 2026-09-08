@@ -35,16 +35,19 @@ would put a service holding a spendable provider key on the public internet.
 
 ## Launch parameters
 
-Supply at least:
+Required vs optional depends on the provider:
 
-- `CROPPER_API_TOKEN` — bootstrap admin bearer token (prefer *Use a secret*).
-- `VCROPPER_API_KEY` — hosted VLM credential (or the Bedrock/AWS equivalents you use).
+| Parameter | OpenAI-compatible (default) | Bedrock |
+|---|---|---|
+| `CROPPER_API_TOKEN` | required (prefer *Use a secret*) | required |
+| `VCROPPER_API_KEY` | required (hosted VLM key) | not used |
+| `BEDROCK_REGION` or `AWS_REGION` | not required | required |
+| `VCROPPER_PROVIDER` | omit (`openai`) | `bedrock` |
+| `VCROPPER_BASE_URL`, `VCROPPER_MODEL` | optional (blank model → NVIDIA default) | optional |
+| `CROPPER_ALLOWED_HOSTS` | optional; persist it if you set it (S3 wildcards) | same |
+| `CROPPER_ALLOW_PRIVATE_HOSTS` | optional; set `false` for public S3 | same |
 
-Optional: `VCROPPER_BASE_URL`, `VCROPPER_MODEL`, `VCROPPER_PROVIDER`, and the other
-variables listed in `brev/cpu-remote/profile.env.example`. Leave those **not required** in
-the Console so deployers can omit them (blank model uses the NVIDIA default). Mark only
-`CROPPER_API_TOKEN` and `VCROPPER_API_KEY` as required. The Brev secret's *name* does
-not have to match the parameter name: the parameter becomes the environment variable.
+Mark only the **required** cells as required in the Console so deployers can omit the rest. The Brev secret's *name* does not have to match the parameter name: the parameter becomes the environment variable.
 
 ## Configure
 
@@ -53,21 +56,30 @@ first boot and then starts the API. `CROPPER_API_TOKEN` is required — a genera
 would be unreachable without SSH, which breaks the one-click Launchable.
 
 Launch parameters are supplied once, at launch. They are **not** re-supplied to later
-container runs, so the profile file is what makes `up` work again after a stop/start.
+container runs. **Only values written into `provider.env` survive a stop/start.** Setup
+persists the provider fields, `CROPPER_API_TOKEN`, and — when supplied —
+`CROPPER_ALLOWED_HOSTS` and `CROPPER_ALLOW_PRIVATE_HOSTS`. An S3 allowlist that exists
+only as a Launch parameter is lost on restart, and jobs then `422`.
 
-To configure by hand instead, from the cloned repository root:
+To configure by hand instead, from the cloned repository root, write the profile
+**first** (`setup.sh` refuses to start without it):
 
 ```bash
-bash brev/cpu-remote/setup.sh
-
 mkdir -p ~/.config/v-cropper
 cp brev/cpu-remote/profile.env.example ~/.config/v-cropper/provider.env
 chmod 600 ~/.config/v-cropper/provider.env
 python3 -c 'import secrets; print("CROPPER_API_TOKEN=" + secrets.token_urlsafe(32))'
 ```
 
-Edit the file with your endpoint, key, model, and that token. The wrappers refuse to run if
-it is group- or world-readable, or if the token is shorter than 24 characters.
+Edit the file with your endpoint, key, model, that token, and any object-store allowlist.
+Then:
+
+```bash
+bash brev/cpu-remote/setup.sh
+```
+
+The wrappers refuse to run if the profile is group- or world-readable, or if the token is
+shorter than 24 characters.
 
 ## Run
 
@@ -142,9 +154,14 @@ leave the bootstrap token alone.
 Publishing the API off loopback without TLS puts the bearer token on the wire. The
 wrappers refuse a non-loopback `CROPPER_BIND_ADDRESS` unless `CROPPER_ALLOW_PLAINTEXT=1`.
 
-The service never fetches or stores your media directly — you pass **presigned URLs** and it
-reads the source and writes the result itself. Both hosts must be in `CROPPER_ALLOWED_HOSTS`
-(default is `minio,localhost`; for Amazon S3 set e.g. `*.s3.us-west-2.amazonaws.com,*.amazonaws.com`).
+The service does not need object-store **credentials**. You pass **presigned URLs**; the
+worker downloads the source to `/tmp/v-cropper/<job_id>`, writes the crop, uploads it, then
+deletes that work directory. Media therefore transits the VM. Both hosts must be in
+`CROPPER_ALLOWED_HOSTS`
+(Compose default is `minio,host.docker.internal`; for Amazon S3 set e.g.
+`*.s3.us-west-2.amazonaws.com,*.amazonaws.com` as a Launch parameter or in `provider.env`).
+For public S3 set `CROPPER_ALLOW_PRIVATE_HOSTS=false` in `provider.env` (Compose defaults it
+to `true` so Docker-network MinIO used by `verify` works).
 Sign GET for the source object and PUT for the destination **key** (S3 has no real folders;
 `s3://bucket/output/` is a prefix — sign `output/crop.mp4`). PUT signatures must include
 `ContentType: video/mp4`. If S3 answers **307** to a hyphenated regional host

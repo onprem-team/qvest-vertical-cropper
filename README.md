@@ -281,7 +281,13 @@ cannot be revoked through the API — it is configuration, and rotating it means
 supported path if you need federated identity.
 
 Submit a clip (times are optional seconds; all crop/scoreboard options accepted by the
-request schema are shown in `/docs`):
+request schema are shown in `/docs`). Hosts in the URLs must appear in
+`CROPPER_ALLOWED_HOSTS` — the Compose quickstart allowlists `minio,host.docker.internal`.
+For a public store, set the allowlist first:
+
+```bash
+export CROPPER_ALLOWED_HOSTS=objects.example
+```
 
 ```bash
 curl -X POST http://localhost:8090/v1/jobs \

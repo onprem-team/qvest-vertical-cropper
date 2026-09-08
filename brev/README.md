@@ -19,15 +19,18 @@ that is NVIDIA-hosted, a gateway/router, Bedrock, or any OpenAI-compatible endpo
   `brev/cpu-remote/setup.sh` (see [cpu-remote/DEPLOY.md](cpu-remote/DEPLOY.md)).
 - A scoped provider credential with an explicit spend limit.
 - Launch parameters for `CROPPER_API_TOKEN` (required) and the VLM key (`VCROPPER_API_KEY`
-  or equivalent). Prefer Brev secrets; the secret *name* does not have to match the
-  parameter name. Leave `VCROPPER_MODEL` / `VCROPPER_BASE_URL` optional.
+  for OpenAI-compatible providers). Bedrock needs `VCROPPER_PROVIDER=bedrock` and
+  `BEDROCK_REGION`/`AWS_REGION` instead of `VCROPPER_API_KEY`. Prefer Brev secrets; the
+  secret *name* does not have to match the parameter name. Leave `VCROPPER_MODEL` /
+  `VCROPPER_BASE_URL` / `CROPPER_ALLOWED_HOSTS` optional.
 
 ## CPU Remote-VLM
 
 On first boot, `cpu-remote/setup.sh` writes `~/.config/v-cropper/provider.env` from Brev
 Launch parameters and starts the API. The profile file is local and gitignored. Launch
-parameters are supplied once at launch and are **not** re-supplied to later Compose runs,
-so the profile file is what makes `up` work again after a stop/start.
+parameters are supplied once at launch and are **not** re-supplied to later Compose runs.
+**Only values written into `provider.env` survive a stop/start** (provider fields, the
+bootstrap token, and `CROPPER_ALLOWED_HOSTS` / `CROPPER_ALLOW_PRIVATE_HOSTS` when supplied).
 
 To restart by hand after the first boot:
 

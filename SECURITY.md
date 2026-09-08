@@ -26,5 +26,8 @@ to the `main` branch.
   Treat those like secrets. `/healthz`, `/readyz`, and `/version` are open by design.
 - Job `source_url` / `destination_url` are fetched and uploaded by the service. Keep
   `CROPPER_ALLOWED_HOSTS` tight; an open allowlist turns the service into an SSRF proxy.
+- Compose defaults `CROPPER_ALLOW_PRIVATE_HOSTS` to true so Docker-network MinIO (`verify`)
+  can run. For a public-S3 Launchable set `CROPPER_ALLOW_PRIVATE_HOSTS=false` in
+  `provider.env` (and as a Launch parameter so it survives restart).
 - The default bind is loopback. Do not publish a TCP port or a Brev Secure Link for the
   API. Reach a Brev VM over SSH (`ssh -N -L` or `brev port-forward`).

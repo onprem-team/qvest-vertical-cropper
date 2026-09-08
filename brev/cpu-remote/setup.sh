@@ -86,6 +86,15 @@ if [[ ! -f "$profile_file" ]]; then
     echo "AWS_REGION=${AWS_REGION:-}"
     echo "BEDROCK_VLM_MODEL_ID=${BEDROCK_VLM_MODEL_ID:-}"
     echo "CROPPER_API_TOKEN=${CROPPER_API_TOKEN}"
+    # Optional object-store allowlist. Omitted unless supplied: Compose then uses its
+    # defaults (minio,host.docker.internal / private hosts true). An S3 Launch parameter
+    # must be written here or stop/start drops it and jobs 422.
+    if [[ -n "${CROPPER_ALLOWED_HOSTS:-}" ]]; then
+      echo "CROPPER_ALLOWED_HOSTS=${CROPPER_ALLOWED_HOSTS}"
+    fi
+    if [[ -n "${CROPPER_ALLOW_PRIVATE_HOSTS:-}" ]]; then
+      echo "CROPPER_ALLOW_PRIVATE_HOSTS=${CROPPER_ALLOW_PRIVATE_HOSTS}"
+    fi
   } >"$profile_file"
   chmod 600 "$profile_file"
   echo "Wrote $profile_file from launch parameters (mode 600)"

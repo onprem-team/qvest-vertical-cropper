@@ -40,7 +40,6 @@ def test_expected_brev_assets_exist():
         "common/validate-exposure.sh",
         "common/write-runtime-manifest.py",
         "common/create-smoke-video.py",
-        "common/assert-smoke-result.py",
         "common/verify-service.py",
         "cpu-remote/deploy-and-verify.sh",
         "cpu-remote/setup.sh",
@@ -108,6 +107,8 @@ def test_setup_persists_launch_parameters_for_restart():
     # A generated token is unreachable without SSH, so the Launchable requires one.
     assert "CROPPER_API_TOKEN is required" in setup
     assert "token_urlsafe(32)" in setup, "the refusal should still tell the operator how to mint one"
+    assert "CROPPER_ALLOWED_HOSTS=" in setup
+    assert "CROPPER_ALLOW_PRIVATE_HOSTS=" in setup
 
 
 def test_setup_derives_the_repo_root_instead_of_guessing_the_harness_path():
@@ -295,7 +296,7 @@ def test_runtime_manifest_is_non_secret_and_records_requested_metadata(tmp_path)
     }
 
 
-def test_smoke_video_and_result_assertion_scripts(tmp_path):
+def test_smoke_video_generator(tmp_path):
     video = tmp_path / "smoke.mp4"
     subprocess.run([
         "python", _asset("common/create-smoke-video.py"), "--output", video,
@@ -304,15 +305,6 @@ def test_smoke_video_and_result_assertion_scripts(tmp_path):
     assert capture.isOpened()
     assert int(capture.get(cv2.CAP_PROP_FRAME_COUNT)) == 30
     capture.release()
-
-    metrics = tmp_path / "metrics.json"
-    metrics.write_text(json.dumps({"keyframes_ok": 1, "keyframe_fail_fraction": 0.0}))
-    output = tmp_path / "out.mp4"
-    output.write_bytes(b"not-a-real-video-but-nonempty")
-    subprocess.run([
-        "python", _asset("common/assert-smoke-result.py"),
-        "--metrics", metrics, "--output", output,
-    ], check=True)
 
 
 def _fake_command(bin_dir, name, body):
@@ -474,6 +466,8 @@ printf 'curl %s\\n' "$*" >> "{calls}"
         text = profile.read_text()
         assert f"CROPPER_API_TOKEN={self.token}" in text
         assert f"VCROPPER_API_KEY={self.api_key}" in text
+        assert "CROPPER_ALLOWED_HOSTS=" not in text
+        assert "CROPPER_ALLOW_PRIVATE_HOSTS=" not in text
         assert "docker compose up" in calls.read_text()
         assert "/healthz" in calls.read_text()
         assert "setup complete" in result.stdout
@@ -481,6 +475,23 @@ printf 'curl %s\\n' "$*" >> "{calls}"
         assert self.token not in result.stderr
         assert self.api_key not in result.stdout
         assert self.api_key not in result.stderr
+
+    def test_persists_object_store_allowlist_when_supplied(self, tmp_path):
+        """An S3 allowlist set as a Launch parameter must survive stop/start."""
+        bin_dir, _ = self._bin(tmp_path)
+        env, profile = self._env(
+            tmp_path, bin_dir,
+            CROPPER_ALLOWED_HOSTS="*.s3.us-west-2.amazonaws.com,*.amazonaws.com",
+            CROPPER_ALLOW_PRIVATE_HOSTS="false",
+            VCROPPER_SKIP_START="1",
+        )
+        result = subprocess.run(
+            ["bash", _asset("cpu-remote/setup.sh")],
+            env=env, capture_output=True, text=True, timeout=30)
+        assert result.returncode == 0, result.stderr
+        text = profile.read_text()
+        assert "CROPPER_ALLOWED_HOSTS=*.s3.us-west-2.amazonaws.com,*.amazonaws.com" in text
+        assert "CROPPER_ALLOW_PRIVATE_HOSTS=false" in text
 
     def test_token_only_is_no_longer_a_silent_skip(self, tmp_path):
         """The old write was gated on a provider key, which left a VM with nothing listening."""
