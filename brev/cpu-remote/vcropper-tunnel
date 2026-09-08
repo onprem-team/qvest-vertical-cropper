@@ -3,10 +3,12 @@
 #
 #   vcropper-tunnel <instance-name> [local-port]
 #
-# The API binds to the instance's loopback interface, so `brev port-forward` is the only
-# way to reach it. That command exits on any network blip, which silently breaks a client
-# mid-run, so this wrapper restarts it with capped exponential backoff and reports
-# readiness by polling /healthz through the tunnel itself.
+# The API binds to the instance's loopback interface. Reach it with
+# `ssh -N -L 8090:127.0.0.1:8090 <instance>` or this wrapper around `brev port-forward`.
+# Some Brev CLIs print the mapping and exit 0 while SSH keeps listening; this wrapper
+# holds that listener. `brev port-forward` also exits on network blips, which silently
+# breaks a client mid-run, so the wrapper restarts it with capped exponential backoff
+# and reports readiness by polling /healthz through the tunnel itself.
 #
 # Ctrl-C stops the tunnel. Nothing here reads or logs the API token.
 set -euo pipefail
@@ -40,11 +42,36 @@ if command -v lsof >/dev/null 2>&1 && lsof -iTCP:"$local_port" -sTCP:LISTEN >/de
 fi
 
 announce_pid=""
+held_pid=""
 cleanup() {
   [[ -n "$announce_pid" ]] && kill "$announce_pid" 2>/dev/null || true
+  [[ -n "$held_pid" ]] && kill "$held_pid" 2>/dev/null || true
   echo "tunnel closed"
 }
 trap cleanup EXIT INT TERM
+
+listener_pid() {
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -t -iTCP:"$local_port" -sTCP:LISTEN 2>/dev/null | head -n1 || true
+  fi
+}
+
+# Newer Brev CLIs print the mapping and exit 0 while SSH keeps listening. Hold that
+# process so this wrapper stays in the foreground until Ctrl-C or the forward dies.
+hold_detached_forward() {
+  local pid
+  pid="$(listener_pid)"
+  if [[ -z "$pid" ]]; then
+    return 1
+  fi
+  held_pid="$pid"
+  echo "[tunnel] port-forward handed off to pid $pid; holding until it exits"
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 1
+  done
+  held_pid=""
+  return 0
+}
 
 announce_when_ready() {
   # Backgrounded so the tunnel keeps the foreground; gives up quietly rather than
@@ -79,6 +106,13 @@ while true; do
   announce_pid=""
 
   if [[ $status -eq 0 ]]; then
+    if hold_detached_forward; then
+      echo "[tunnel] SSH forward exited; reconnecting in ${backoff}s" >&2
+      sleep "$backoff"
+      backoff=$(( backoff * 2 ))
+      (( backoff > max_backoff )) && backoff="$max_backoff"
+      continue
+    fi
     echo "[tunnel] port-forward exited cleanly"
     exit 0
   fi

@@ -3,7 +3,7 @@ services:
     build: .
     ports:
       # Loopback by default: on a Brev VM the API must be reachable only through
-      # `brev port-forward` (an SSH tunnel), never from the instance's public interface.
+      # an SSH tunnel (`ssh -N -L` or `brev port-forward`), never from the public interface.
       # A non-loopback value is refused by brev/common/validate-exposure.sh unless
       # CROPPER_ALLOW_PLAINTEXT=1, because the bearer token would cross the wire in clear.
       - "${CROPPER_BIND_ADDRESS:-127.0.0.1}:${CROPPER_PUBLISHED_PORT:-8090}:8080"

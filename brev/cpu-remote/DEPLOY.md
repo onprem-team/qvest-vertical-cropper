@@ -15,11 +15,23 @@ Source: <https://github.com/onprem-team/qvest-vertical-cropper>
 ## Why VM Mode
 
 Create a Brev **Launchable** in VM Mode whose git URL is this public repository. Brev
-clones the repo on the instance and runs `brev/cpu-remote/setup.sh`.
+clones the repo, then runs the **setup script** from the Launchable form. The Console
+requires a shebang; a path-only value is ignored and the API never starts. Paste:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+cd /home/ubuntu/qvest-vertical-cropper
+bash brev/cpu-remote/setup.sh
+```
+
+If the clone directory name differs, change the `cd` line. Launch parameters are injected
+only for that first boot. Editing the script on a VM that already booted does not re-supply
+secrets — redeploy.
 
 Do not publish a TCP port or a Secure Link. The API binds to the instance's loopback
-interface and is reached through `brev port-forward`, an authenticated SSH tunnel. A
-published port would put a service holding a spendable provider key on the public internet.
+interface and is reached over SSH (`ssh -N -L` or `brev port-forward`). A published port
+would put a service holding a spendable provider key on the public internet.
 
 ## Launch parameters
 
@@ -29,7 +41,9 @@ Supply at least:
 - `VCROPPER_API_KEY` — hosted VLM credential (or the Bedrock/AWS equivalents you use).
 
 Optional: `VCROPPER_BASE_URL`, `VCROPPER_MODEL`, `VCROPPER_PROVIDER`, and the other
-variables listed in `brev/cpu-remote/profile.env.example`. The Brev secret's *name* does
+variables listed in `brev/cpu-remote/profile.env.example`. Leave those **not required** in
+the Console so deployers can omit them (blank model uses the NVIDIA default). Mark only
+`CROPPER_API_TOKEN` and `VCROPPER_API_KEY` as required. The Brev secret's *name* does
 not have to match the parameter name: the parameter becomes the environment variable.
 
 ## Configure
@@ -75,16 +89,21 @@ brev/cpu-remote/vcropper-service verify   # full end-to-end, makes real VLM call
 deployed HTTP surface: presigned GET in, presigned PUT out, bearer auth enforced, and the
 resulting object probed for a 9:16 stream. It also asserts the VLM was actually reached —
 a crop is still produced when every model call fails, so "succeeded" alone proves nothing.
+When `verify` finishes it tears that stack down; run `vcropper-service up` to serve jobs
+again.
 
 Retain only non-secret evidence: `verify-evidence.json`, `runtime-manifest.json`, the
 resolved endpoint host/path, model id, source revision, and keyframe-failure rate.
 
 ## Calling the service
 
-The API is not reachable from your workstation until you open the tunnel:
+The API is not reachable from your workstation until you open a tunnel. Prefer SSH so
+the forward stays in the foreground (some `brev port-forward` builds print the mapping
+and exit 0 while SSH keeps running):
 
 ```bash
-brev/cpu-remote/vcropper-tunnel <instance-name>     # holds 127.0.0.1:8090, reconnects on drop
+ssh -N -L 8090:127.0.0.1:8090 <instance-name>
+# or: brev/cpu-remote/vcropper-tunnel <instance-name>
 ```
 
 Leave that running. In another shell, the service behaves as an ordinary HTTP API on
@@ -124,7 +143,13 @@ Publishing the API off loopback without TLS puts the bearer token on the wire. T
 wrappers refuse a non-loopback `CROPPER_BIND_ADDRESS` unless `CROPPER_ALLOW_PLAINTEXT=1`.
 
 The service never fetches or stores your media directly — you pass **presigned URLs** and it
-reads the source and writes the result itself. Both hosts must be in `CROPPER_ALLOWED_HOSTS`.
+reads the source and writes the result itself. Both hosts must be in `CROPPER_ALLOWED_HOSTS`
+(default is `minio,localhost`; for Amazon S3 set e.g. `*.s3.us-west-2.amazonaws.com,*.amazonaws.com`).
+Sign GET for the source object and PUT for the destination **key** (S3 has no real folders;
+`s3://bucket/output/` is a prefix — sign `output/crop.mp4`). PUT signatures must include
+`ContentType: video/mp4`. If S3 answers **307** to a hyphenated regional host
+(`s3-us-west-2.amazonaws.com`), sign the PUT for that host: the cropper does not follow
+redirects on upload.
 
 ### Worked example
 
@@ -136,12 +161,13 @@ import httpx
 BASE = "http://127.0.0.1:8090"
 AUTH = {"Authorization": f"Bearer {CROPPER_API_TOKEN}"}
 
-s3 = boto3.client("s3")
+# Bucket region. If PUT 307s, use endpoint_url="https://s3-<region>.amazonaws.com".
+s3 = boto3.client("s3", region_name="us-west-2")
 source_url = s3.generate_presigned_url(
     "get_object", Params={"Bucket": "media", "Key": "game.mp4"}, ExpiresIn=3600)
 destination_url = s3.generate_presigned_url(
     "put_object",
-    Params={"Bucket": "media", "Key": "game_vertical.mp4", "ContentType": "video/mp4"},
+    Params={"Bucket": "media", "Key": "output/game_vertical.mp4", "ContentType": "video/mp4"},
     ExpiresIn=3600,
 )
 
@@ -181,7 +207,11 @@ even though the job completed. A job where *every* keyframe fails is reported as
 | `503` | Service unconfigured (no API token, no provider credential, Redis down) |
 
 Failures return a generic `crop processing failed` message; the specific cause is in
-`vcropper-service logs` so that provider details are not exposed to callers.
+`vcropper-service logs` so that provider details are not exposed to callers. A job that
+dies during download/upload is often an expired signature, a missing PUT `ContentType`,
+or an S3 **307** to a regional host (this client does not follow PUT redirects). NVIDIA
+hosted models may **429** on long clips; the job can still succeed if enough keyframes
+parse — drop `sample_fps` if fail rates spike.
 
 ## Benchmarking the deployed configuration
 

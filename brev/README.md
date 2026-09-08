@@ -7,7 +7,7 @@ runs no model: it calls a hosted VLM over an API. Launch from this public reposi
 
 | Profile | Model path | Default network posture |
 |---|---|---|
-| `cpu-remote` | Hosted or custom OpenAI-compatible VLM, or AWS Bedrock | No published ports; reached over `brev port-forward` |
+| `cpu-remote` | Hosted or custom OpenAI-compatible VLM, or AWS Bedrock | Loopback only; SSH tunnel (`ssh -N -L` or `brev port-forward`) |
 
 There is no local-model profile. v-cropper always reaches its model over an API, whether
 that is NVIDIA-hosted, a gateway/router, Bedrock, or any OpenAI-compatible endpoint.
@@ -15,10 +15,12 @@ that is NVIDIA-hosted, a gateway/router, Bedrock, or any OpenAI-compatible endpo
 ## Prerequisites before use
 
 - A Brev organization and a Launchable that clones this public git URL (VM Mode).
+  Paste a shebang setup script that `cd`s into the clone and runs
+  `brev/cpu-remote/setup.sh` (see [cpu-remote/DEPLOY.md](cpu-remote/DEPLOY.md)).
 - A scoped provider credential with an explicit spend limit.
 - Launch parameters for `CROPPER_API_TOKEN` (required) and the VLM key (`VCROPPER_API_KEY`
   or equivalent). Prefer Brev secrets; the secret *name* does not have to match the
-  parameter name.
+  parameter name. Leave `VCROPPER_MODEL` / `VCROPPER_BASE_URL` optional.
 
 ## CPU Remote-VLM
 

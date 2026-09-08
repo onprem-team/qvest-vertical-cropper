@@ -22,3 +22,9 @@ to the `main` branch.
   secret: prefer `.env` (gitignored) or environment variables, never commit keys.
 - Frames are sent to whichever provider you configure; review that provider's data-handling
   policy for sensitive footage.
+- The HTTP job API requires `CROPPER_API_TOKEN` (or a minted key) on every `/v1` route.
+  Treat those like secrets. `/healthz`, `/readyz`, and `/version` are open by design.
+- Job `source_url` / `destination_url` are fetched and uploaded by the service. Keep
+  `CROPPER_ALLOWED_HOSTS` tight; an open allowlist turns the service into an SSRF proxy.
+- The default bind is loopback. Do not publish a TCP port or a Brev Secure Link for the
+  API. Reach a Brev VM over SSH (`ssh -N -L` or `brev port-forward`).

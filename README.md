@@ -1,10 +1,7 @@
 # v-cropper-cli — sports cropper
 
-
-
-[CI](https://github.com/onprem-team/qvest-vertical-cropper/actions/workflows/ci.yml)
-[License: Apache 2.0](LICENSE)
-Python
+[![CI](https://github.com/onprem-team/qvest-vertical-cropper/actions/workflows/ci.yml/badge.svg)](https://github.com/onprem-team/qvest-vertical-cropper/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Turn a landscape sports video into a smooth 9:16 vertical crop that follows the action.
 A vision model points at the current focus of play (the ball/puck or the player carrying
@@ -253,8 +250,9 @@ an information leak.
 
 The published port binds to `127.0.0.1` by default (`CROPPER_BIND_ADDRESS`). Widening that
 to a routable address without TLS in front puts the bearer token on the wire in plaintext;
-the wrappers refuse unless you set `CROPPER_ALLOW_PLAINTEXT=1`. Reach the loopback bind
-through `brev port-forward` or another SSH tunnel. If you terminate TLS in front of a
+the wrappers refuse unless you set `CROPPER_ALLOW_PLAINTEXT=1`. For local Compose, talk to
+`http://127.0.0.1:8090`. On a Brev VM the same loopback bind is reached over SSH — see
+[brev/cpu-remote/DEPLOY.md](brev/cpu-remote/DEPLOY.md). If you terminate TLS in front of a
 public bind, declare it with `CROPPER_PUBLIC_ORIGIN=https://…`.
 
 `CROPPER_API_TOKEN` is the **bootstrap** admin credential. Use it to mint ordinary keys
@@ -324,7 +322,9 @@ wildcards), `CROPPER_ALLOW_PRIVATE_HOSTS`, `CROPPER_MAX_DURATION_SEC`, and
 disabled unless the allowlisted object store is intentionally on a trusted private
 network. Generate GET permission for the source and PUT permission for the destination;
 the source server should support byte ranges so ffmpeg input seeking can avoid fetching
-unneeded media.
+unneeded media. Compose defaults `CROPPER_ALLOW_PRIVATE_HOSTS` to true so Docker-network
+MinIO (used by `verify`) works; set it false for public S3 unless the store is on a
+trusted private network.
 
 The container includes ffmpeg and the OpenCV runtime but **no local model bundle or model
 server**. Configure either a hosted OpenAI-compatible endpoint with `VCROPPER_BASE_URL`,
@@ -336,12 +336,13 @@ processes one job at a time.
 
 Operational endpoints are `/healthz` (process), `/readyz` (Redis, ffmpeg, and model
 credentials), `/version`, `/docs`, and `/openapi.json`. A failed PUT commonly means the destination signature lacks PUT
-permission or has expired; a `422` submission commonly means its host is absent from
-`CROPPER_ALLOWED_HOSTS`.
+permission, has expired, or S3 returned **307** to another host (this client does not
+follow PUT redirects — sign for `s3-<region>.amazonaws.com` when that happens). A `422`
+submission commonly means its host is absent from `CROPPER_ALLOWED_HOSTS`.
 
 ## Performance (case study)
 
-We measured three backends on a small internal football benchmark (frozen scorer;
+We measured several backends on a small internal football benchmark (frozen scorer;
 higher coverage is better, `1.000` = every labeled action landed inside the crop). The
 clips are copyrighted, so the dataset is **not** distributable — but the harness that
 produced these numbers ships in [eval/](eval/README.md), so you can reproduce the *shape*
@@ -384,6 +385,8 @@ for H.264: `brew install ffmpeg` (macOS) · `apt install ffmpeg` (Debian/Ubuntu)
 `choco install ffmpeg` (Windows).
 - **"No keyframes were produced"** → the input isn't decodable by OpenCV; re-encode the source.
 - **Cost / rate limits** → lower `--sample-fps`, `--send-width`, or `--concurrency`.
+  NVIDIA hosted models may **429** on long clips; the job can still succeed if enough
+  keyframes parse. Shorten the clip or drop `--sample-fps` if fail rates spike.
 
 
 

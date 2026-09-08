@@ -20,6 +20,12 @@ under its own license (installed via the package manager, not bundled here):
   - Pillow               HPND License (MIT-CMU)
   - python-dotenv        BSD 3-Clause License
   - openai               Apache License 2.0
+  - fastapi              MIT License
+  - pydantic             MIT License
+  - httpx                BSD 3-Clause License
+  - redis                MIT License
+  - uvicorn              BSD 3-Clause License
+  - boto3                Apache License 2.0
   - Flask                BSD 3-Clause License   (dev-only; benchmark labeler, not shipped)
 
 ------------------------------------------------------------------------------
@@ -34,9 +40,11 @@ across environments. It is developer tooling and is not part of the installed pa
 External programs
 ------------------------------------------------------------------------------
 
-This software optionally invokes FFmpeg (https://ffmpeg.org), if present on the
+The CLI optionally invokes FFmpeg (https://ffmpeg.org), if present on the
 system PATH, to re-encode output to H.264. FFmpeg is a separate program under
-its own license (LGPL/GPL); it is not bundled, modified, or redistributed with
-this project. If a self-contained distribution (e.g. a Docker image) later
-bundles FFmpeg or FFmpeg-enabled OpenCV binaries, those components' licenses
-must be reproduced here.
+its own license (LGPL/GPL). The source tree does not vendor FFmpeg.
+
+The published Docker image (`Dockerfile`) installs the Debian `ffmpeg` package
+into the container. Anyone who redistributes that image must comply with
+FFmpeg's license (and Debian's packaging notices) in addition to this project's
+Apache-2.0 terms.

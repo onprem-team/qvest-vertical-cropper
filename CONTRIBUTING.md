@@ -1,7 +1,8 @@
 # Contributing to v-cropper-cli
 
 Thanks for your interest in contributing! This project is a CPU-only, embeddable sports-cropper
-library + CLI built on any OpenAI-compatible vision model.
+library, CLI, and optional FastAPI job service built on any OpenAI-compatible vision model
+(or native AWS Bedrock).
 
 ## Development setup
 
