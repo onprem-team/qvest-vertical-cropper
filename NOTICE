@@ -1,12 +1,21 @@
-v-cropper-cli
-Copyright (c) 2026 Qvest Group GmbH
+V-Cropper 0.1.0
+Copyright © 2026 Qvest.US
 
-This product includes software developed at Qvest Group GmbH, licensed under the
-Apache License, Version 2.0 (the "License"); you may not use this software
-except in compliance with the License. A copy of the License is included in
-the LICENSE file, or at:
+This project is licensed under the Apache License, Version 2.0.
+For the full license text, see the LICENSE file.
 
-    http://www.apache.org/licenses/LICENSE-2.0
+Free of charge. Provided AS IS, without warranty and without indemnity of any kind - including for intellectual property claims. ENTIRELY AT YOUR OWN RISK.
+
+
+Automated crops are not editorial judgment - review every output in full before publication, broadcast, or delivery. Content outside the crop window is discarded, including captions, bugs, credits, and watermarks.
+
+
+You are responsible for holding the right to alter and reframe your footage. Do not process personal, confidential, or regulated content.
+
+
+Full terms: LICENSE
+https://github.com/onprem-team/qvest-vertical-cropper/blob/main/LICENSE
+http://www.apache.org/licenses/LICENSE-2.0
 
 ------------------------------------------------------------------------------
 Third-party dependencies
@@ -32,7 +41,7 @@ under its own license (installed via the package manager, not bundled here):
 Vendored code
 ------------------------------------------------------------------------------
 
-The benchmark scorer at eval/score.py is Qvest Group GmbH code vendored (frozen, byte-identical)
+The benchmark scorer at eval/score.py is Qvest.US code vendored (frozen, byte-identical)
 from the original benchmark harness so numbers stay comparable
 across environments. It is developer tooling and is not part of the installed package.
 
