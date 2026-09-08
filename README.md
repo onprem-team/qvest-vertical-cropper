@@ -58,7 +58,7 @@ uv run v-cropper input.mp4 -o out.mp4   # custom output path
 Set `VCROPPER_PROVIDER=openai|bedrock`; `openai` is the default for backward compatibility.
 In OpenAI-compatible mode, the connector is configured from env vars (or `.env`) and is
 overridable per run. **The default
-endpoint + model is NVIDIA-hosted** (`nvidia/nemotron-nano-12b-v2-vl` at
+endpoint + model is NVIDIA-hosted** (`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning` at
 `https://integrate.api.nvidia.com/v1`) — set `VCROPPER_API_KEY` and you're ready. Point at any
 other OpenAI-compatible provider by overriding the base URL + model:
 
@@ -106,8 +106,9 @@ The API key is resolved as: `--api-key` → `$VCROPPER_API_KEY` → `$GEMINI_API
 connector automatically routes to Gemini's OpenAI-compatible endpoint. See
 [.env.example](.env.example) for every setting.
 
-> **Provider notes:** the shipped default is the NVIDIA-hosted `nemotron-nano-12b-v2-vl`
-> (live-validated: clean point-format compliance, smooth paths). For the best tracking
+> **Provider notes:** the shipped default is NVIDIA-hosted
+> `nemotron-3-nano-omni-30b-a3b-reasoning` (live-checked 2026-09: accepts vision
+> chat completions and returns parseable `{x,y}` points). For the best tracking
 > accuracy, **Gemini** (`gemini-flash-latest`) leads — see [Performance](#performance-case-study).
 > If a given model mis-formats its point replies (watch the keyframe-fail % in the run summary),
 > switch to Gemini.
@@ -350,7 +351,8 @@ of this table on your own footage.
 | Backend                                        | val coverage / worst | test coverage / worst | notes                                         |
 | ---------------------------------------------- | -------------------- | --------------------- | --------------------------------------------- |
 | Gemini (`gemini-flash-latest`)                 | 0.957 / 0.875        | 1.000 / 1.000         | accuracy leader; matches the R&D v0013 winner |
-| NVIDIA `nemotron-nano-12b-v2-vl` (**default**) | 0.872 / 0.750        | 0.818 / 0.500         | 0% parse-fail, smoothest path; below Gemini   |
+| NVIDIA `nemotron-3-nano-omni-30b-a3b-reasoning` (**default**) | not re-benchmarked | not re-benchmarked | current hosted default (2026-09); old `nano-12b-v2-vl` is EOL |
+| NVIDIA `nemotron-nano-12b-v2-vl` (retired) | 0.872 / 0.750        | 0.818 / 0.500         | 0% parse-fail, smoothest path; below Gemini; **410 Gone** since 2026-08-26 |
 | OpenRouter `qwen3-vl-235b`                     | 0.872 / 0.625        | 0.727 / 0.571         | strong, but needs the format-tolerant parser  |
 
 

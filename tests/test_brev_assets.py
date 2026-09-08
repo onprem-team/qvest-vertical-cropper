@@ -429,7 +429,7 @@ class TestSetupLaunchable:
             "VCROPPER_PROVIDER": "openai",
             "VCROPPER_BASE_URL": "https://integrate.api.nvidia.com/v1",
             "VCROPPER_API_KEY": self.api_key,
-            "VCROPPER_MODEL": "nemotron-nano-12b-v2-vl",
+            "VCROPPER_MODEL": "nemotron-3-nano-omni-30b-a3b-reasoning",
             "CROPPER_API_TOKEN": self.token,
             "CROPPER_BIND_ADDRESS": "127.0.0.1",
             "CROPPER_PUBLISHED_PORT": "18090",

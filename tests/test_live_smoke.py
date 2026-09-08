@@ -39,7 +39,7 @@ _LIVE_ENABLED = os.environ.get("VCROPPER_LIVE_TEST") == "1"
 
 # (provider_id, base_url, key_env, default_model)
 _PROVIDERS = [
-    ("nvidia", NVIDIA_BASE_URL, "NVIDIA_API_KEY", "nvidia/nemotron-nano-12b-v2-vl"),
+    ("nvidia", NVIDIA_BASE_URL, "NVIDIA_API_KEY", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"),
     ("openai", "https://api.openai.com/v1", "OPENAI_API_KEY", "gpt-4o"),
     ("gemini", GEMINI_COMPAT_BASE_URL, "GEMINI_API_KEY", "gemini-2.5-flash"),
     ("openrouter", "https://openrouter.ai/api/v1", "OPENROUTER_API_KEY",

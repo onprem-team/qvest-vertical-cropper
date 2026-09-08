@@ -35,10 +35,9 @@ logger = logging.getLogger(__name__)
 
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 GEMINI_COMPAT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
-# Default NVIDIA-hosted VLM, live-validated 2026-07 against integrate.api.nvidia.com
-# (clean point-format compliance on the shipped prompt). Catalog ids can drift — if calls
-# start 404ing, re-confirm via GET /v1/models.
-DEFAULT_NVIDIA_MODEL = "nvidia/nemotron-nano-12b-v2-vl"
+# Default NVIDIA-hosted VLM. Catalog ids drift: nemotron-nano-12b-v2-vl went 410 Gone
+# (EOL 2026-08-26). Re-confirm via GET /v1/models if calls start failing.
+DEFAULT_NVIDIA_MODEL = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 # Cross-region inference profile, rather than a region-bound foundation-model id.
 DEFAULT_BEDROCK_MODEL = "global.anthropic.claude-sonnet-4-5-20250929-v1:0"
