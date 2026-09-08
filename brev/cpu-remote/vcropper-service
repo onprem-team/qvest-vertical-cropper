@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Manage the v-cropper API stack (API + Redis) on a Brev CPU instance.
+#
+#   vcropper-service up|down|restart|status|logs|verify [extra docker compose args...]
+#
+# Secrets are loaded from the private profile file and passed to Compose through the
+# environment. They are never echoed and never written to the compose project.
+set -euo pipefail
+export PATH="$HOME/.local/bin:$PATH"
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../common/paths.sh
+source "$script_dir/../common/paths.sh"
+repo_dir="$VCROPPER_REPO_DIR"
+profile_file="${VCROPPER_PROFILE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/v-cropper/provider.env}"
+port="${CROPPER_PUBLISHED_PORT:-8090}"
+
+command="${1:-status}"
+shift || true
+
+if [[ ! -f "$profile_file" ]]; then
+  echo "Provider profile file is missing; configure VCROPPER_PROFILE_FILE or provider.env" >&2
+  exit 1
+fi
+
+# Refuse a world- or group-readable profile: it holds the provider key and the API token.
+if mode="$(stat -c '%a' "$profile_file" 2>/dev/null)"; then
+  :
+else
+  mode="$(stat -f '%Lp' "$profile_file")"
+fi
+if (( (8#$mode & 077) != 0 )); then
+  echo "Provider profile file must not be readable by group or other users" >&2
+  exit 1
+fi
+
+set -a
+# shellcheck disable=SC1090
+source "$profile_file"
+set +a
+
+bash "$script_dir/../common/validate-runtime-config.sh"
+bash "$script_dir/../common/validate-exposure.sh"
+
+if [[ -z "${CROPPER_API_TOKEN:-}" ]]; then
+  echo "CROPPER_API_TOKEN is required; the API must not run without a caller credential" >&2
+  exit 1
+fi
+if (( ${#CROPPER_API_TOKEN} < 24 )); then
+  echo "CROPPER_API_TOKEN is shorter than 24 characters; generate one with:" >&2
+  echo "  python3 -c 'import secrets; print(secrets.token_urlsafe(32))'" >&2
+  exit 1
+fi
+
+cd "$repo_dir"
+
+case "$command" in
+  up)
+    docker compose up -d --wait "$@"
+    echo "v-cropper API listening on ${CROPPER_BIND_ADDRESS:-127.0.0.1}:$port of this instance."
+    echo "From a workstation: brev port-forward <instance> -p $port:$port"
+    ;;
+  down)
+    docker compose down "$@"
+    ;;
+  restart)
+    docker compose restart "$@"
+    ;;
+  status)
+    docker compose ps "$@"
+    ;;
+  logs)
+    docker compose logs --no-color "$@"
+    ;;
+  verify)
+    bash "$script_dir/deploy-and-verify.sh" "$@"
+    ;;
+  *)
+    echo "usage: $(basename "$0") up|down|restart|status|logs|verify [docker compose args...]" >&2
+    exit 2
+    ;;
+esac

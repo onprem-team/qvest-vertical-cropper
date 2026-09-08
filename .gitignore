@@ -1,0 +1,36 @@
+.venv/
+.venv*/
+__pycache__/
+*.pyc
+.env
+*_vertical.mp4
+*_debug.mp4
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Eval harness — developer tooling only. Never commit datasets, labels, predictions,
+# metrics, the VLM response cache, or any local dataset copy: the benchmark clips are
+# copyrighted and every result/artifact below is derived from them.
+eval/data/
+eval/results/
+eval/**/.cache/
+
+# Labeler working files (frames + labels are derived from your local footage).
+eval/labeler/labels.json
+eval/labeler/labels.json.tmp
+eval/labeler/frames_index.json
+eval/labeler/static/frames/
+
+# Rendered crops are derived from the copyrighted eval footage — never commit.
+renders/
+
+# Brev workstation runtime profiles may contain provider or NGC credentials.
+brev/**/*.env

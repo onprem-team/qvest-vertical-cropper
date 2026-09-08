@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Hold an SSH tunnel from this workstation to the v-cropper API on a Brev instance.
+#
+#   vcropper-tunnel <instance-name> [local-port]
+#
+# The API binds to the instance's loopback interface, so `brev port-forward` is the only
+# way to reach it. That command exits on any network blip, which silently breaks a client
+# mid-run, so this wrapper restarts it with capped exponential backoff and reports
+# readiness by polling /healthz through the tunnel itself.
+#
+# Ctrl-C stops the tunnel. Nothing here reads or logs the API token.
+set -euo pipefail
+export PATH="$HOME/.local/bin:$PATH"
+
+instance="${1:-}"
+local_port="${2:-${CROPPER_PUBLISHED_PORT:-8090}}"
+remote_port="${CROPPER_REMOTE_PORT:-${CROPPER_PUBLISHED_PORT:-8090}}"
+brev_bin="${VCROPPER_BREV_BIN:-brev}"
+max_backoff="${VCROPPER_TUNNEL_MAX_BACKOFF:-30}"
+
+if [[ -z "$instance" ]]; then
+  echo "usage: $(basename "$0") <instance-name> [local-port]" >&2
+  exit 2
+fi
+
+if ! command -v "$brev_bin" >/dev/null 2>&1; then
+  echo "brev CLI not found. Install it from https://developer.nvidia.com/brev and run 'brev login'." >&2
+  exit 1
+fi
+
+# Fail fast on an expired session rather than looping on an auth error forever.
+if ! "$brev_bin" ls >/dev/null 2>&1; then
+  echo "brev CLI is not authenticated or cannot reach the API. Run 'brev login' and retry." >&2
+  exit 1
+fi
+
+if command -v lsof >/dev/null 2>&1 && lsof -iTCP:"$local_port" -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "local port $local_port is already in use; pass a different local port" >&2
+  exit 1
+fi
+
+announce_pid=""
+cleanup() {
+  [[ -n "$announce_pid" ]] && kill "$announce_pid" 2>/dev/null || true
+  echo "tunnel closed"
+}
+trap cleanup EXIT INT TERM
+
+announce_when_ready() {
+  # Backgrounded so the tunnel keeps the foreground; gives up quietly rather than
+  # claiming failure, since the tunnel may simply be slow to establish.
+  for _ in $(seq 1 30); do
+    sleep 1
+    if curl --fail --silent --max-time 2 "http://127.0.0.1:$local_port/healthz" >/dev/null 2>&1; then
+      echo "  API is reachable at http://127.0.0.1:$local_port"
+      echo "  Send: Authorization: Bearer \$CROPPER_API_TOKEN"
+      return
+    fi
+  done
+}
+
+backoff=1
+attempt=0
+while true; do
+  attempt=$((attempt + 1))
+  echo "[tunnel] connecting to $instance ($local_port -> $remote_port), attempt $attempt"
+  announce_when_ready &
+  announce_pid=$!
+
+  set +e
+  "$brev_bin" port-forward "$instance" -p "$local_port:$remote_port"
+  status=$?
+  set -e
+
+  # Stop the poller for this attempt; leaving it running would accumulate one background
+  # curl loop per reconnect and hold the script's stdout open.
+  kill "$announce_pid" 2>/dev/null || true
+  wait "$announce_pid" 2>/dev/null || true
+  announce_pid=""
+
+  if [[ $status -eq 0 ]]; then
+    echo "[tunnel] port-forward exited cleanly"
+    exit 0
+  fi
+
+  echo "[tunnel] port-forward exited with status $status; reconnecting in ${backoff}s" >&2
+  sleep "$backoff"
+  backoff=$(( backoff * 2 ))
+  (( backoff > max_backoff )) && backoff="$max_backoff"
+done

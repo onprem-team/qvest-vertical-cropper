@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Run v-cropper against a configured external OpenAI-compatible VLM.
+set -euo pipefail
+export PATH="$HOME/.local/bin:$PATH"
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../common/paths.sh
+source "$script_dir/../common/paths.sh"
+repo_dir="$VCROPPER_REPO_DIR"
+profile_file="${VCROPPER_PROFILE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/v-cropper/provider.env}"
+
+if [[ ! -f "$profile_file" ]]; then
+  echo "Provider profile file is missing; configure VCROPPER_PROFILE_FILE or provider.env" >&2
+  exit 1
+fi
+
+if mode="$(stat -c '%a' "$profile_file" 2>/dev/null)"; then
+  :
+else
+  mode="$(stat -f '%Lp' "$profile_file")"
+fi
+if (( (8#$mode & 077) != 0 )); then
+  echo "Provider profile file must not be readable by group or other users" >&2
+  exit 1
+fi
+
+set -a
+source "$profile_file"
+set +a
+bash "$script_dir/../common/validate-runtime-config.sh"
+
+cd "$repo_dir"
+exec uv run v-cropper "$@"

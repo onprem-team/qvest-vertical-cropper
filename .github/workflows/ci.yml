@@ -1,0 +1,53 @@
+name: CI
+
+# Minimal CI: lint + tests on every push / PR to main.
+# No CD — this tool ships from source/git and is never published to a package index.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Sync dependencies
+        run: uv sync --frozen
+      - name: Ruff lint
+        run: uv run ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Min and max supported interpreters (requires-python >= 3.10).
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      # OpenCV needs the shared libs to `import cv2` on a bare runner. ffmpeg is a real
+      # runtime dependency (trim, encode, audio mux, probe), so the runner needs it for the
+      # same reason the container installs it — without it the integration tests skip and the
+      # readiness checks report the service as not ready.
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgl1 libglib2.0-0 ffmpeg
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Sync dependencies
+        run: uv sync --frozen
+      - name: Run tests
+        # `live`/`slow` are excluded by default (see pyproject addopts); coverage is reported, not gated.
+        run: uv run pytest

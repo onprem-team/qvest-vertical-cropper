@@ -1,0 +1,74 @@
+services:
+  cropper:
+    build: .
+    ports:
+      # Loopback by default: on a Brev VM the API must be reachable only through
+      # `brev port-forward` (an SSH tunnel), never from the instance's public interface.
+      # A non-loopback value is refused by brev/common/validate-exposure.sh unless
+      # CROPPER_ALLOW_PLAINTEXT=1, because the bearer token would cross the wire in clear.
+      - "${CROPPER_BIND_ADDRESS:-127.0.0.1}:${CROPPER_PUBLISHED_PORT:-8090}:8080"
+    environment:
+      CROPPER_REDIS_URL: redis://redis:6379/1
+      # Required. The service holds a spendable provider key and fetches caller-supplied
+      # URLs, so it must never start without a caller credential.
+      CROPPER_API_TOKEN: ${CROPPER_API_TOKEN:?set CROPPER_API_TOKEN (see brev/cpu-remote/profile.env.example)}
+      # The container always binds 0.0.0.0 (Docker routes to it), so the service cannot
+      # infer its own exposure. These carry the operator's declaration in so it can.
+      CROPPER_PUBLIC_ORIGIN: ${CROPPER_PUBLIC_ORIGIN:-}
+      CROPPER_ALLOW_PLAINTEXT: ${CROPPER_ALLOW_PLAINTEXT:-}
+      CROPPER_ALLOWED_HOSTS: ${CROPPER_ALLOWED_HOSTS:-minio,host.docker.internal}
+      CROPPER_ALLOW_PRIVATE_HOSTS: ${CROPPER_ALLOW_PRIVATE_HOSTS:-true}
+      VCROPPER_PROVIDER: ${VCROPPER_PROVIDER:-openai}
+      VCROPPER_API_KEY: ${VCROPPER_API_KEY:-}
+      VCROPPER_BASE_URL: ${VCROPPER_BASE_URL:-https://integrate.api.nvidia.com/v1}
+      VCROPPER_MODEL: ${VCROPPER_MODEL:-}
+      BEDROCK_REGION: ${BEDROCK_REGION:-}
+      AWS_REGION: ${AWS_REGION:-}
+      BEDROCK_VLM_MODEL_ID: ${BEDROCK_VLM_MODEL_ID:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - cropper-redis:/data
+    restart: unless-stopped
+
+  # Object storage used only by `deploy-and-verify.sh` to exercise the real
+  # presigned-URL transport path. Started via `--profile verify`; never part of a
+  # normal deployment.
+  minio:
+    profiles: ["verify"]
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "127.0.0.1:${MINIO_PUBLISHED_PORT:-9000}:9000"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-vcropper}
+      # Deliberately has no default: deploy-and-verify.sh generates one per run. A literal
+      # here would be a committed credential, and a `:?` guard would make every ordinary
+      # `docker compose up` demand a MinIO password, since Compose interpolates the whole
+      # file regardless of which profiles are active.
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - cropper-minio:/data
+
+volumes:
+  cropper-redis:
+  cropper-minio:

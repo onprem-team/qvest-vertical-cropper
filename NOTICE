@@ -1,0 +1,42 @@
+v-cropper-cli
+Copyright (c) 2026 Qvest Group GmbH
+
+This product includes software developed at Qvest Group GmbH, licensed under the
+Apache License, Version 2.0 (the "License"); you may not use this software
+except in compliance with the License. A copy of the License is included in
+the LICENSE file, or at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+------------------------------------------------------------------------------
+Third-party dependencies
+------------------------------------------------------------------------------
+
+This software depends on the following third-party packages, each distributed
+under its own license (installed via the package manager, not bundled here):
+
+  - opencv-python        Apache License 2.0
+  - numpy                BSD 3-Clause License
+  - Pillow               HPND License (MIT-CMU)
+  - python-dotenv        BSD 3-Clause License
+  - openai               Apache License 2.0
+  - Flask                BSD 3-Clause License   (dev-only; benchmark labeler, not shipped)
+
+------------------------------------------------------------------------------
+Vendored code
+------------------------------------------------------------------------------
+
+The benchmark scorer at eval/score.py is Qvest Group GmbH code vendored (frozen, byte-identical)
+from the original benchmark harness so numbers stay comparable
+across environments. It is developer tooling and is not part of the installed package.
+
+------------------------------------------------------------------------------
+External programs
+------------------------------------------------------------------------------
+
+This software optionally invokes FFmpeg (https://ffmpeg.org), if present on the
+system PATH, to re-encode output to H.264. FFmpeg is a separate program under
+its own license (LGPL/GPL); it is not bundled, modified, or redistributed with
+this project. If a self-contained distribution (e.g. a Docker image) later
+bundles FFmpeg or FFmpeg-enabled OpenCV binaries, those components' licenses
+must be reproduced here.
