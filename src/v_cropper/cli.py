@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2026 Qvest Group GmbH
+# SPDX-FileCopyrightText: Copyright (c) 2026 Qvest.US, LLC
 # SPDX-License-Identifier: Apache-2.0
 """v-cropper CLI: point a vision model at a sports video, get a smooth 9:16 vertical crop."""
 

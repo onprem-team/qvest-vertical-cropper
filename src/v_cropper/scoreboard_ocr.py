@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2026 Qvest Group GmbH
+# SPDX-FileCopyrightText: Copyright (c) 2026 Qvest.US, LLC
 # SPDX-License-Identifier: Apache-2.0
 """VLM-based scoreboard OCR extraction via the provider-neutral connector.
 

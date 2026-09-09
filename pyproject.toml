@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Sports cropper: VLM-guided 9:16 vertical-crop CLI with OpenAI-compatible and AWS Bedrock support"
 readme = "README.md"
 license = "Apache-2.0"
-authors = [{ name = "Qvest Group GmbH" }]
+authors = [{ name = "Qvest.US, LLC" }]
 keywords = ["video", "vertical-crop", "sports", "vlm", "ffmpeg", "9:16"]
 requires-python = ">=3.10"
 classifiers = [

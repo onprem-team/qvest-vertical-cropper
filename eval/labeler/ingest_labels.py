@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: Copyright (c) 2026 Qvest Group GmbH
+# SPDX-FileCopyrightText: Copyright (c) 2026 Qvest.US, LLC
 # SPDX-License-Identifier: Apache-2.0
 """Convert click-labels into scorer-ready ground truth.
 

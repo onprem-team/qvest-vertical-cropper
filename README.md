@@ -399,7 +399,7 @@ for H.264: `brew install ffmpeg` (macOS) · `apt install ffmpeg` (Debian/Ubuntu)
 ## License
 
 ```
-Copyright 2026 Qvest Group GmbH
+Copyright 2026 Qvest.US, LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

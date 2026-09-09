@@ -1,5 +1,5 @@
 V-Cropper 0.1.0
-Copyright © 2026 Qvest.US
+Copyright 2026 Qvest.US, LLC
 
 This project is licensed under the Apache License, Version 2.0.
 For the full license text, see the LICENSE file.
@@ -41,7 +41,7 @@ under its own license (installed via the package manager, not bundled here):
 Vendored code
 ------------------------------------------------------------------------------
 
-The benchmark scorer at eval/score.py is Qvest.US code vendored (frozen, byte-identical)
+The benchmark scorer at eval/score.py is Qvest.US, LLC code vendored (frozen, byte-identical)
 from the original benchmark harness so numbers stay comparable
 across environments. It is developer tooling and is not part of the installed package.
 

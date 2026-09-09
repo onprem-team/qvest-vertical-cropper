@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2026 Qvest Group GmbH
+# SPDX-FileCopyrightText: Copyright (c) 2026 Qvest.US, LLC
 # SPDX-License-Identifier: Apache-2.0
 """Reusable, cancellable orchestration for VLM-guided vertical cropping."""
 from __future__ import annotations

@@ -183,7 +183,7 @@ The NVIDIA free tier is ~40 rpm — keep `--concurrency 1-2` there to avoid 429s
 
 - `run_eval.py` — runs the pipeline per clip, emits scorer-schema predictions, scores, and
   writes the metrics + perf/cost summary.
-- `score.py` — the frozen scorer (vendored Qvest code; attribution in [`../NOTICE`](../NOTICE)).
+- `score.py` — the frozen scorer (vendored Qvest.US, LLC code; attribution in [`../NOTICE`](../NOTICE)).
   Kept byte-identical; also usable as a standalone CLI.
 - `make_manifest.py` — probes clips by decoding to build the authoritative manifest.
 - `cache.py` — on-disk VLM response cache wrapper (eval-only).
